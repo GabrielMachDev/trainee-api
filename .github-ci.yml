@@ -1,0 +1,66 @@
+stages:
+  - lint
+  - test
+  - build
+  - security
+  - deploy
+
+variables:
+  IMAGE_NAME: $CI_REGISTRY_IMAGE/trainee-api
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+# Cache para acelerar builds (dependências pip)
+cache:
+  paths:
+    - .cache/pip
+
+lint:
+  stage: lint
+  image: python:3.11-slim
+  before_script:
+    - pip install flake8
+  script:
+    - flake8 .
+  # Job falha se houver erros de lint
+
+test:
+  stage: test
+  image: python:3.11-slim
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install -r requirements.txt --cache-dir .cache/pip
+  script:
+    - pytest -v
+  # Job falha se algum teste falhar
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+  only:
+    - branches
+
+security_scan:
+  stage: security
+  image: python:3.11-slim
+  before_script:
+    - pip install bandit
+  script:
+    - bandit -r .
+  # Job falha se encontrar vulnerabilidades críticas
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Simulando deploy no ECS..."
+    - echo "Comando: terraform apply -auto-approve"
+    - echo "Imagem: $IMAGE_NAME:$IMAGE_TAG"
+  only:
+    - main

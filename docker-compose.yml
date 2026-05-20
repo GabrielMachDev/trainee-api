@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: trainee-api
+    ports:
+      - "5000:5000"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  tests:
+    build: .
+    container_name: trainee-tests
+    depends_on:
+      api:
+        condition: service_healthy
+    command: pytest -v
