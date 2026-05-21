@@ -1,16 +1,16 @@
 # Etapa 1: Build
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bookworm AS builder
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --user -r requirements.txt
+RUN pip install --prefix=/install -r requirements.txt
 
 # Etapa 2: Runtime
-FROM python:3.11-alpine
+FROM python:3.11-alpine3.20
 WORKDIR /app
+RUN apk add --no-cache curl
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /install /usr/local
 COPY . .
-ENV PATH=/root/.local/bin:$PATH
 USER appuser
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:5000/health || exit 1
